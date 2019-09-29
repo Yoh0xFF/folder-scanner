@@ -28,96 +28,91 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class FolderScanner extends JFrame {
-	
-	private static final Logger logger = Logger.getLogger(FolderScanner.class.getName());
-	private static final int WIDTH = 500;
-	private static final int HEIGHT = 200;
-	
-	public FolderScanner() {
-		// set general options
+
+    private static final Logger logger = Logger.getLogger(FolderScanner.class.getName());
+    private static final int WIDTH = 500;
+    private static final int HEIGHT = 200;
+
+    public FolderScanner() {
+        // set general options
         Toolkit tk = Toolkit.getDefaultToolkit();
         Dimension screenSize = tk.getScreenSize();
-        
-        int x = (screenSize.width - WIDTH) / 2;
-        int y = (screenSize.height - HEIGHT) / 2;
-        
+
+        int x = (screenSize.width - WIDTH) / 2, y = (screenSize.height - HEIGHT) / 2;
+
         this.setSize(WIDTH, HEIGHT);
         this.setLocation(x, y);
-        
+
         this.setResizable(false);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
+
         // create panel
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new GridLayout(3, 3));
-        for (int i = 0; i < 3; ++i) {
-        	for (int j = 0; j < 3; ++j) {
-        		JPanel panel = new JPanel();
-        		panel.setLayout(new BorderLayout());
-        		
-        		if (i == 1 && j == 1) {
-        			JButton selectButton = new JButton("საქაღალდის არჩევა");
-        	        selectButton.addActionListener(new Scan());
-        	        panel.add(selectButton);
-        		}
-        		
-        		inputPanel.add(panel);
-        	}
-        }
-        
-        this.add(inputPanel);
-	}
-	
-	private class Scan implements ActionListener {
 
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			JFileChooser fileChooser = new JFileChooser(System.getProperty("user.home"));
-			fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			
-			int rv = fileChooser.showOpenDialog(FolderScanner.this);
-            if (rv == JFileChooser.APPROVE_OPTION) {
-                File file = fileChooser.getSelectedFile();
-                
-                List<String> nameList = new ArrayList<>();
-                for (File subFile : file.listFiles()) {
-                	String name = subFile.getName();
-                	
-                	if (name.lastIndexOf('.') > 0) {
-                		name = name.substring(0, subFile.getName().lastIndexOf('.'));
-                	}
-                	
-                	nameList.add(name);
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                JPanel panel = new JPanel();
+                panel.setLayout(new BorderLayout());
+
+                if (i == 1 && j == 1) {
+                    JButton selectButton = new JButton("Choose directory");
+
+                    selectButton.addActionListener(e -> {
+                        JFileChooser fileChooser = new JFileChooser(System.getProperty("user.home"));
+                        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+                        if (fileChooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+                            return;
+                        }
+
+                        File selectedDirectory = fileChooser.getSelectedFile();
+                        List<String> nameList = new ArrayList<>();
+                        for (File subFile : selectedDirectory.listFiles()) {
+                            String name = subFile.getName();
+
+                            if (name.lastIndexOf('.') > 0) {
+                                name = name.substring(0, subFile.getName().lastIndexOf('.'));
+                            }
+
+                            nameList.add(name);
+                        }
+                        Collections.sort(nameList);
+                        createExcelFile(nameList);
+
+                        this.dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
+                    });
+
+                    panel.add(selectButton);
                 }
-                Collections.sort(nameList);
-                
-                createExcelFile(nameList);
-                
-                FolderScanner.this.dispatchEvent(new WindowEvent(FolderScanner.this, WindowEvent.WINDOW_CLOSING));
+
+                inputPanel.add(panel);
             }
-		}
-		
-		private void createExcelFile(List<String> nameList) {
-			try (Workbook workbook = new XSSFWorkbook()) {
-				Sheet sheet = workbook.createSheet();
-				sheet.setColumnWidth(0, 15000);
-				
-				int rowCount = -1;
-				for (String name : nameList) {
-					++rowCount;
-					Row row = sheet.createRow(rowCount);
-					
-					Cell cell = row.createCell(0);
-			        cell.setCellValue(name);        
-				}
-				
-				File excelFile = new File(System.getProperty("user.home") + "/Desktop/excel.xlsx");
-				try (FileOutputStream fout = new FileOutputStream(excelFile)) {
-					workbook.write(fout);
-				}
-			} catch (IOException ex) {
-				logger.log(Level.SEVERE, "createExcelFile", ex);
-			}
-		}
-	}
+        }
+
+        this.add(inputPanel);
+    }
+
+    private void createExcelFile(List<String> nameList) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet();
+            sheet.setColumnWidth(0, 15000);
+
+            int rowCount = -1;
+            for (String name : nameList) {
+                ++rowCount;
+                Row row = sheet.createRow(rowCount);
+
+                Cell cell = row.createCell(0);
+                cell.setCellValue(name);
+            }
+
+            File excelFile = new File(System.getProperty("user.home") + "/excel.xlsx");
+            try (FileOutputStream os = new FileOutputStream(excelFile)) {
+                workbook.write(os);
+            }
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, "createExcelFile", ex);
+        }
+    }
 }
